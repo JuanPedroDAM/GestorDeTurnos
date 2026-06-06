@@ -137,15 +137,17 @@ class TurnosViewModel(private val repository: TurnosRepository) : ViewModel() {
         combine(_anioMesActual, _usuarioId) { yearMonth, uid ->
             Pair(yearMonth, uid)
         }.flatMapLatest { (yearMonth, uid) ->
+            val zonaUTC = ZoneId.of("UTC")
             val inicioLong =
-                yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val finLong = yearMonth.atEndOfMonth().atTime(23, 59, 59).atZone(ZoneId.systemDefault())
+                yearMonth.atDay(1).atStartOfDay(zonaUTC).toInstant().toEpochMilli()
+            val finLong = yearMonth.atEndOfMonth().atTime(23, 59, 59).atZone(zonaUTC)
                 .toInstant().toEpochMilli()
             repository.obtenerAsignacionesConDetalle(uid, inicioLong, finLong)
         }.map { lista ->
+            val zonaUTC = ZoneId.of("UTC")
             lista.groupBy { detalle ->
                 val fechaLocal =
-                    Instant.ofEpochMilli(detalle.fecha).atZone(ZoneId.systemDefault()).toLocalDate()
+                    Instant.ofEpochMilli(detalle.fecha).atZone(zonaUTC).toLocalDate()
                 fechaLocal.dayOfMonth // Agrupa los elementos coleccionados usando la clave numérica de su día natural
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
@@ -158,16 +160,18 @@ class TurnosViewModel(private val repository: TurnosRepository) : ViewModel() {
         combine(_anioMesActual, _usuarioId) { yearMonth, uid ->
             Pair(yearMonth, uid)
         }.flatMapLatest { (yearMonth, uid) ->
+            val zonaUTC = ZoneId.of("UTC")
             val inicioLong =
-                yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val finLong = yearMonth.atEndOfMonth().atTime(23, 59, 59).atZone(ZoneId.systemDefault())
+                yearMonth.atDay(1).atStartOfDay(zonaUTC).toInstant().toEpochMilli()
+            val finLong = yearMonth.atEndOfMonth().atTime(23, 59, 59).atZone(zonaUTC)
                 .toInstant().toEpochMilli()
             // Necesitamos un método en el repositorio para obtener todas las notas de un rango
             repository.obtenerNotasPorRango(uid, inicioLong, finLong)
         }.map { lista ->
+            val zonaUTC = ZoneId.of("UTC")
             lista.associateBy { nota ->
                 val fechaLocal =
-                    Instant.ofEpochMilli(nota.fecha).atZone(ZoneId.systemDefault()).toLocalDate()
+                    Instant.ofEpochMilli(nota.fecha).atZone(zonaUTC).toLocalDate()
                 fechaLocal.dayOfMonth
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
@@ -254,7 +258,7 @@ class TurnosViewModel(private val repository: TurnosRepository) : ViewModel() {
     fun asignarTurnoAlDia(idTipoTurno: Int, dia: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val fecha = _anioMesActual.value.atDay(dia)
-            val fechaMillis = fecha.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val fechaMillis = fecha.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
             val nuevaAsignacion = AsignacionTurno(
                 idUsuario = _usuarioId.value,
                 idTipoTurno = idTipoTurno,
@@ -315,13 +319,13 @@ class TurnosViewModel(private val repository: TurnosRepository) : ViewModel() {
             var fechaBucle = fechaInicio
             var diaIndice = 0
 
-            // Bucle aritmético cronológico adaptativo libre de desbordamientos
+            // Zona horaria UTC para asegurar que el timestamp represente exactamente el día seleccionado
+            val zonaUTC = ZoneId.of("UTC")
+
             while (!fechaBucle.isAfter(fechaFin)) {
-                val turnoActual =
-                    secuencia[diaIndice % secuencia.size] // Operación módulo mapea cíclicamente el pool
+                val turnoActual = secuencia[diaIndice % secuencia.size]
                 if (turnoActual != null) {
-                    val fechaMillis =
-                        fechaBucle.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    val fechaMillis = fechaBucle.atStartOfDay(zonaUTC).toInstant().toEpochMilli()
                     listaNuevosTurnos.add(
                         AsignacionTurno(
                             idUsuario = _usuarioId.value,
@@ -343,7 +347,7 @@ class TurnosViewModel(private val repository: TurnosRepository) : ViewModel() {
     fun cargarDetallesDia(dia: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val fecha = _anioMesActual.value.atDay(dia)
-            val fechaMillis = fecha.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val fechaMillis = fecha.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
             val nota = repository.obtenerNotaPorFecha(_usuarioId.value, fechaMillis)
             _notaDelDia.value = nota
         }
@@ -353,7 +357,8 @@ class TurnosViewModel(private val repository: TurnosRepository) : ViewModel() {
     fun guardarNota(dia: Int, contenido: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val fecha = _anioMesActual.value.atDay(dia)
-            val fechaMillis = fecha.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val zonaUTC = ZoneId.of("UTC")
+            val fechaMillis = fecha.atStartOfDay(zonaUTC).toInstant().toEpochMilli()
             
             // Buscamos la nota actual en la base de datos para asegurar consistencia
             val notaExistente = repository.obtenerNotaPorFecha(_usuarioId.value, fechaMillis)

@@ -307,22 +307,16 @@ fun DialogoGeneradorPatrones(
 
     // Pasarela de instanciación síncrona hacia el DatePicker tradicional del sistema operativo
     val abrirDatePicker = { esInicio: Boolean ->
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
         val currentMillis = if (esInicio) fechaInicioMillis else fechaFinMillis
         if (currentMillis != null) calendar.timeInMillis = currentMillis
 
         val dialog = android.app.DatePickerDialog(
             context,
             { _, year, month, day ->
-                val selected = java.util.Calendar.getInstance()
-                selected.set(
-                    year,
-                    month,
-                    day,
-                    0,
-                    0,
-                    0
-                ) // Normaliza la marca al primer milisegundo del día seleccionado
+                val selected = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                selected.set(year, month, day, 0, 0, 0)
+                selected.set(java.util.Calendar.MILLISECOND, 0)
                 if (esInicio) fechaInicioMillis = selected.timeInMillis else fechaFinMillis =
                     selected.timeInMillis
             },
